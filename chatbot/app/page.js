@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from "react";
 
 function App() {
-
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,7 +18,13 @@ function App() {
 
     if (!input.trim()) return;
 
-    const userMessage = { role: "user", content: input };
+    const prompt = input;
+
+    const userMessage = {
+      role: "user",
+      content: prompt,
+    };
+
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
@@ -31,20 +36,43 @@ function App() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt: input }),
+        body: JSON.stringify({ prompt }),
       });
 
       const data = await response.json();
 
+      // API Error
+      if (!response.ok) {
+        const errorMessage =
+          typeof data?.error === "string"
+            ? data.error
+            : data?.error?.message ||
+              data?.message ||
+              "Something went wrong.";
+
+        setError(errorMessage);
+        return;
+      }
+
+      // Success
       if (data.success) {
-        const aiMessage = { role: "assistant", content: data.reply };
-        setMessages((prev) => [...prev, aiMessage]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: data.reply,
+          },
+        ]);
       } else {
-        setError(data.error || "Something went wrong");
+        setError(
+          typeof data?.error === "string"
+            ? data.error
+            : data?.error?.message || "Something went wrong."
+        );
       }
     } catch (err) {
+      console.error(err);
       setError("Failed to connect to server.");
-      console.error("Error:", err);
     } finally {
       setLoading(false);
     }
@@ -55,9 +83,9 @@ function App() {
     setError("");
   };
 
-  const formatMessage = (text) => {
-    return text.split("\n").map((line, i) => (
-      <React.Fragment key={i}>
+  const formatMessage = (text = "") => {
+    return text.split("\n").map((line, index) => (
+      <React.Fragment key={index}>
         {line}
         <br />
       </React.Fragment>
@@ -69,10 +97,12 @@ function App() {
       <div className="chat-container">
         <div className="chat-header">
           <h1>Hello</h1>
+
           <button onClick={clearChat} className="clear-btn">
             Clear Chat
           </button>
         </div>
+
         <div className="messages-container">
           {messages.length === 0 ? (
             <div className="welcome-message">
@@ -83,12 +113,11 @@ function App() {
             messages.map((msg, index) => (
               <div
                 key={index}
-                className={`message ${msg.role === "user" ? "user-message" : "ai-message"}`}
+                className={`message ${
+                  msg.role === "user" ? "user-message" : "ai-message"
+                }`}
               >
                 <div className="message-content">
-                  {/* <div className="message-avatar">
-                    {msg.role === "user" ? "You" : "AI"}
-                  </div> */}
                   <div className="message-text">
                     {formatMessage(msg.content)}
                   </div>
@@ -111,25 +140,31 @@ function App() {
             </div>
           )}
 
-          {error && <div className="error-message">{error}</div>}
+          {error && (
+            <div className="error-message">
+              {error}
+            </div>
+          )}
 
           <div ref={messagesEndRef} />
         </div>
+
         <form onSubmit={sendMessage} className="input-form">
           <input
             type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
-            disabled={loading}
             className="message-input"
+            placeholder="Type your message..."
+            value={input}
+            disabled={loading}
+            onChange={(e) => setInput(e.target.value)}
           />
+
           <button
             type="submit"
-            disabled={loading || !input.trim()}
             className="send-btn"
+            disabled={loading || !input.trim()}
           >
-            {loading ? "loading" : "send"}
+            {loading ? "Loading..." : "Send"}
           </button>
         </form>
       </div>

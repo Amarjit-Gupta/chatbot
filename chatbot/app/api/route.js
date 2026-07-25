@@ -10,9 +10,9 @@ export async function POST(request) {
       return Response.json(
         {
           success: false,
-          error: "prompt is required",
+          error: "Prompt is required",
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -34,22 +34,28 @@ export async function POST(request) {
           Authorization: `Bearer ${process.env.API_KEY}`,
           "Content-Type": "application/json",
         },
-      },
+      }
     );
 
     return Response.json({
       success: true,
       reply: response.data.choices[0].message.content,
     });
+
   } catch (error) {
     console.error(error.response?.data || error.message);
 
     return Response.json(
       {
         success: false,
-        error: error.response?.data || error.message,
+        error:
+          error.response?.data?.error?.message ||
+          error.message ||
+          "Something went wrong",
       },
-      { status: 500 },
+      {
+        status: error.response?.status || 500,
+      }
     );
   }
 }
